@@ -42,4 +42,4 @@ Ein benutzerfreundlicher Rechner zur Berechnung von Gewinn und Verlust beim Hand
 # Repository klonen
 git clone https://github.com/deinusername/taler-rechner.git
 
-# Oder einfach index.html herunterladen und öffnen
+# Oder einfach alles herunterladen und  index.html  öffnen
