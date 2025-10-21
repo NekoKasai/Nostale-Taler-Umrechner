@@ -7,9 +7,6 @@ export default function TalerRechner() {
   const [items, setItems] = useState({
     Komfort: [
       { id: 1, name: "Goldener Kartenhalter", talerCost: 100, resaleGold: 11990000, buyAmount: 1, sellAmount: 1 }
-    ],
-    Verstaerkung: [
-      { id: 2, name: "Verstaerkungsstein A", talerCost: 50, resaleGold: 5900000, buyAmount: 1, sellAmount: 1 }
     ]
   });
 
@@ -32,110 +29,191 @@ export default function TalerRechner() {
     return { cost, profit, pct, revenue };
   }
 
-  return (
-    <div style={{ padding: "20px", fontFamily: "Arial" }}>
-      <h1>Gold Taler Rechner</h1>
-      <p>Berechne Gewinn und Verlust fuer Mall-Items</p>
+  // Create elements without JSX
+  return React.createElement(
+    "div",
+    { style: { padding: "20px", fontFamily: "Arial" } },
+    [
+      React.createElement("h1", { key: "title" }, "Gold Taler Rechner"),
+      React.createElement("p", { key: "subtitle" }, "Berechne Gewinn und Verlust"),
       
-      <div style={{ marginBottom: "20px" }}>
-        <div>Talerpreis (1 Taler =)</div>
-        {!editingTaler ? (
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <div style={{ fontSize: "20px", fontWeight: "bold" }}>
-              {talerPrice.toLocaleString('de-DE')}
-            </div>
-            <div>Gold</div>
-          </div>
-        ) : (
-          <input
-            type="number"
-            value={talerPrice}
-            onChange={(e) => setTalerPrice(Number(e.target.value))}
-            style={{ padding: "5px" }}
-          />
-        )}
-        <button
-          onClick={() => setEditingTaler((s) => !s)}
-          style={{ marginLeft: "10px", padding: "5px 10px" }}
-        >
-          {editingTaler ? "Speichern" : "Bearbeiten"}
-        </button>
-      </div>
+      React.createElement(
+        "div",
+        { key: "price-section", style: { marginBottom: "20px" } },
+        [
+          React.createElement("div", { key: "label" }, "Talerpreis (1 Taler =)"),
+          !editingTaler 
+            ? React.createElement(
+                "div", 
+                { 
+                  key: "display",
+                  style: { display: "flex", gap: "10px", alignItems: "center" }
+                },
+                [
+                  React.createElement(
+                    "div",
+                    { 
+                      key: "value",
+                      style: { fontSize: "20px", fontWeight: "bold" }
+                    },
+                    talerPrice.toLocaleString('de-DE')
+                  ),
+                  React.createElement("div", { key: "unit" }, "Gold")
+                ]
+              )
+            : React.createElement("input", {
+                key: "input",
+                type: "number",
+                value: talerPrice,
+                onChange: (e) => setTalerPrice(Number(e.target.value)),
+                style: { padding: "5px" }
+              }),
+          React.createElement(
+            "button",
+            {
+              key: "button",
+              onClick: () => setEditingTaler((s) => !s),
+              style: { marginLeft: "10px", padding: "5px 10px" }
+            },
+            editingTaler ? "Speichern" : "Bearbeiten"
+          )
+        ]
+      ),
 
-      {Object.entries(items).map(([category, list]) => (
-        <div key={category} style={{ marginBottom: "30px" }}>
-          <h2>{category}</h2>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr>
-                  <th style={{ padding: "8px", border: "1px solid #ccc" }}>Item</th>
-                  <th style={{ padding: "8px", border: "1px solid #ccc" }}>Menge Einkauf</th>
-                  <th style={{ padding: "8px", border: "1px solid #ccc" }}>Kosten (Taler)</th>
-                  <th style={{ padding: "8px", border: "1px solid #ccc" }}>Einkauf (Gold)</th>
-                  <th style={{ padding: "8px", border: "1px solid #ccc" }}>Wiederverkauf (Gold)</th>
-                  <th style={{ padding: "8px", border: "1px solid #ccc" }}>Gewinn / Verlust</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((it) => {
-                  const { cost, profit, pct } = profitFor(it);
-                  return (
-                    <tr key={it.id}>
-                      <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                        <input
-                          value={it.name}
-                          onChange={(e) => updateItem(category, it.id, { name: e.target.value })}
-                          style={{ width: "100%", padding: "4px" }}
-                        />
-                      </td>
-                      <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                        <input
-                          type="number"
-                          value={it.buyAmount}
-                          onChange={(e) => updateItem(category, it.id, { buyAmount: Number(e.target.value) })}
-                          style={{ width: "60px", padding: "4px" }}
-                        />
-                      </td>
-                      <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                        <input
-                          type="number"
-                          value={it.talerCost}
-                          onChange={(e) => updateItem(category, it.id, { talerCost: Number(e.target.value) })}
-                          style={{ width: "60px", padding: "4px" }}
-                        />
-                      </td>
-                      <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                        {cost.toLocaleString('de-DE')}
-                      </td>
-                      <td style={{ padding: "8px", border: "1px solid #ccc" }}>
-                        <input
-                          type="number"
-                          value={it.resaleGold}
-                          onChange={(e) => updateItem(category, it.id, { resaleGold: Number(e.target.value) })}
-                          style={{ width: "120px", padding: "4px" }}
-                        />
-                      </td>
-                      <td style={{ 
-                        padding: "8px", 
-                        border: "1px solid #ccc",
-                        color: profit >= 0 ? "green" : "red",
-                        fontWeight: "bold"
-                      }}>
-                        {profit.toLocaleString('de-DE')} ({pct.toFixed(2)}%)
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ))}
+      ...Object.entries(items).map(([category, list]) =>
+        React.createElement(
+          "div",
+          {
+            key: category,
+            style: { marginBottom: "30px" }
+          },
+          [
+            React.createElement("h2", { key: "header" }, category),
+            React.createElement(
+              "div",
+              {
+                key: "table-container",
+                style: { overflowX: "auto" }
+              },
+              React.createElement(
+                "table",
+                {
+                  key: "table",
+                  style: { width: "100%", borderCollapse: "collapse" }
+                },
+                [
+                  React.createElement(
+                    "thead",
+                    { key: "thead" },
+                    React.createElement(
+                      "tr",
+                      { key: "header-row" },
+                      [
+                        React.createElement("th", { key: "name", style: tableHeaderStyle }, "Item"),
+                        React.createElement("th", { key: "amount", style: tableHeaderStyle }, "Menge"),
+                        React.createElement("th", { key: "cost", style: tableHeaderStyle }, "Kosten (Taler)"),
+                        React.createElement("th", { key: "buy", style: tableHeaderStyle }, "Einkauf (Gold)"),
+                        React.createElement("th", { key: "sell", style: tableHeaderStyle }, "Verkauf (Gold)"),
+                        React.createElement("th", { key: "profit", style: tableHeaderStyle }, "Gewinn/Verlust")
+                      ]
+                    )
+                  ),
+                  React.createElement(
+                    "tbody",
+                    { key: "tbody" },
+                    list.map((it) => {
+                      const { cost, profit, pct } = profitFor(it);
+                      return React.createElement(
+                        "tr",
+                        { key: it.id },
+                        [
+                          React.createElement(
+                            "td",
+                            { key: "name", style: tableCellStyle },
+                            React.createElement("input", {
+                              value: it.name,
+                              onChange: (e) => updateItem(category, it.id, { name: e.target.value }),
+                              style: { width: "100%", padding: "4px" }
+                            })
+                          ),
+                          React.createElement(
+                            "td",
+                            { key: "amount", style: tableCellStyle },
+                            React.createElement("input", {
+                              type: "number",
+                              value: it.buyAmount,
+                              onChange: (e) => updateItem(category, it.id, { buyAmount: Number(e.target.value) }),
+                              style: { width: "60px", padding: "4px" }
+                            })
+                          ),
+                          React.createElement(
+                            "td",
+                            { key: "cost", style: tableCellStyle },
+                            React.createElement("input", {
+                              type: "number",
+                              value: it.talerCost,
+                              onChange: (e) => updateItem(category, it.id, { talerCost: Number(e.target.value) }),
+                              style: { width: "60px", padding: "4px" }
+                            })
+                          ),
+                          React.createElement(
+                            "td",
+                            { key: "buy", style: tableCellStyle },
+                            cost.toLocaleString('de-DE')
+                          ),
+                          React.createElement(
+                            "td",
+                            { key: "sell", style: tableCellStyle },
+                            React.createElement("input", {
+                              type: "number",
+                              value: it.resaleGold,
+                              onChange: (e) => updateItem(category, it.id, { resaleGold: Number(e.target.value) }),
+                              style: { width: "120px", padding: "4px" }
+                            })
+                          ),
+                          React.createElement(
+                            "td",
+                            {
+                              key: "profit",
+                              style: {
+                                ...tableCellStyle,
+                                color: profit >= 0 ? "green" : "red",
+                                fontWeight: "bold"
+                              }
+                            },
+                            `${profit.toLocaleString('de-DE')} (${pct.toFixed(2)}%)`
+                          )
+                        ]
+                      );
+                    })
+                  )
+                ]
+              )
+            )
+          ]
+        )
+      ),
 
-      <footer style={{ marginTop: "20px", fontSize: "12px", color: "#666" }}>
-        <p>Hinweis: Transaktionskosten werden nicht beruecksichtigt.</p>
-      </footer>
-    </div>
+      React.createElement(
+        "footer",
+        {
+          key: "footer",
+          style: { marginTop: "20px", fontSize: "12px", color: "#666" }
+        },
+        React.createElement("p", { key: "footer-text" }, "Hinweis: Transaktionskosten nicht beruecksichtigt.")
+      )
+    ]
   );
 }
+
+// Style definitions
+const tableHeaderStyle = {
+  padding: "8px",
+  border: "1px solid #ccc",
+  textAlign: "left"
+};
+
+const tableCellStyle = {
+  padding: "8px",
+  border: "1px solid #ccc"
+};
