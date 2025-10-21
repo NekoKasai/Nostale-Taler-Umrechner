@@ -1,12 +1,350 @@
 <!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Taler Rechner</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold ↔ Taler Rechner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Zusätzliche benutzerdefinierte Stile für bessere Kompatibilität */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .profit-positive {
+            color: #34D399;
+        }
+        .profit-negative {
+            color: #F87171;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-100 p-6 font-sans">
+    <div class="max-w-6xl mx-auto">
+        <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold leading-tight text-yellow-400">Gold ↔ Taler Rechner</h1>
+                <p class="text-sm text-gray-400">Berechne Gewinn & Verlust für Mall-Items — mit Mengenangabe.</p>
+            </div>
+
+            <div class="bg-gray-800 border border-gray-700 shadow rounded p-4 flex flex-col sm:flex-row items-center gap-4">
+                <div>
+                    <div class="text-xs text-gray-400">Talerpreis (1 Taler =)</div>
+                    <div id="taler-display" class="flex items-baseline gap-2">
+                        <div class="text-xl font-semibold text-orange-400" id="taler-value">120.000</div>
+                        <div class="text-sm text-gray-500">Gold</div>
+                    </div>
+                    <div id="taler-edit" class="hidden">
+                        <input
+                            type="number"
+                            id="taler-input"
+                            class="w-32 border border-gray-600 bg-gray-900 text-yellow-300 rounded px-2 py-1"
+                            value="120000"
+                        />
+                    </div>
+                </div>
+                <button
+                    id="edit-taler-btn"
+                    class="px-3 py-1 bg-gradient-to-r from-orange-500 to-yellow-400 text-black font-semibold rounded text-sm hover:opacity-90 transition"
+                >
+                    Bearbeiten
+                </button>
+            </div>
+        </header>
+
+        <div id="items-container">
+            <!-- Hier werden die Kategorien und Items dynamisch eingefügt -->
+        </div>
+
+        <footer class="mt-6 text-sm text-gray-500 text-center">
+            <p>
+                Hinweis: Diese App rechnet direkt mit den eingegebenen Zahlen. Behalte Transaktionskosten
+                / Gebühren im Kopf – sie werden hier nicht automatisch berücksichtigt.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Datenstruktur
+        const itemsData = {
+            Komfort: [
+                { id: 1, name: "Goldener Kartenhalter", talerCost: 100, resaleGold: 11990000, buyAmount: 1, sellAmount: 1 },
+                { id: 5, name: "NosHändlerMedaille", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 6, name: "Haustierperle", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 7, name: "Partnerspezialistenkartenhalter", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 8, name: "Partnerperle", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 9, name: "Feenperle", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 10, name: "Parfüm (20 Stück)", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 11, name: "Lautsprecher (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 12, name: "Hochzeitsbox", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 13, name: "Sprechblase (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 14, name: "Flügel der Freundschaft (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+            ],
+            Verstärkung: [
+                { id: 2, name: "Verstärkungsstein A", talerCost: 50, resaleGold: 5900000, buyAmount: 1, sellAmount: 1 },
+            ],
+            Begleiter: [
+                { id: 3, name: "Begleiter-Futterpaket", talerCost: 20, resaleGold: 1800000, buyAmount: 1, sellAmount: 1 },
+            ],
+            Aussehen: [
+                { id: 4, name: "Stylisches Kostüm", talerCost: 80, resaleGold: 9500000, buyAmount: 1, sellAmount: 1 },
+            ],
+            Versteckung: [
+                { id: 15, name: "Cellon-Entferner", talerCost: 75, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 16, name: "Tattoo-Wechsel-Schriftrolle (zufällig)", talerCost: 60, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 17, name: "Loa-Wechsel-Kristall", talerCost: 60, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 18, name: "Premium-Runen-Upgraderolle", talerCost: 30, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 19, name: "Amulett des Segens", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 20, name: "Goldene Ausrüstungsschutzrolle", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 21, name: "Ausrüstungsschutzrolle", talerCost: 20, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 22, name: "Amulett des Schutzes", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 23, name: "Tarotkartenspiel", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 24, name: "Schriftrolle der Freisetzung", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 25, name: "Amulett der Verstärkung", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 26, name: "Heldenhaftes Amulett des Segens (Statisch)", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 27, name: "Heldenhaftes Amulett des Segens (Zufall)", talerCost: 75, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 28, name: "Reparatur-Runenamboss", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 29, name: "Runenentfernungs-Hammer", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 30, name: "Glücksrunen-Schriftrolle", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 31, name: "Tattoo-Speicherschriftrolle", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 32, name: "Tattoo-Entferner", talerCost: 35, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+                { id: 33, name: "Runenpolitur", talerCost: 60, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+            ],
+        };
+
+        // Globale Variablen
+        let talerPrice = 120000;
+        let isEditingTaler = false;
+
+        // Hilfsfunktionen
+        function formatNumber(num) {
+            return num.toLocaleString('de-DE');
+        }
+
+        function parseNumber(str) {
+            return Number(str.replace(/\./g, '').replace(/,/g, '.'));
+        }
+
+        function calcCostInGold(talerCost, amount) {
+            return talerCost * talerPrice * amount;
+        }
+
+        function profitFor(item) {
+            const cost = calcCostInGold(item.talerCost, item.buyAmount);
+            const revenue = item.resaleGold * item.sellAmount;
+            const profit = revenue - cost;
+            const pct = cost === 0 ? 0 : (profit / cost) * 100;
+            return { cost, profit, pct, revenue };
+        }
+
+        // UI-Funktionen
+        function toggleTalerEdit() {
+            isEditingTaler = !isEditingTaler;
+            
+            const display = document.getElementById('taler-display');
+            const edit = document.getElementById('taler-edit');
+            const button = document.getElementById('edit-taler-btn');
+            
+            if (isEditingTaler) {
+                display.classList.add('hidden');
+                edit.classList.remove('hidden');
+                button.textContent = 'Speichern';
+                
+                const input = document.getElementById('taler-input');
+                input.value = talerPrice;
+                input.focus();
+            } else {
+                const input = document.getElementById('taler-input');
+                const newPrice = parseInt(input.value);
+                
+                if (!isNaN(newPrice) && newPrice > 0) {
+                    talerPrice = newPrice;
+                    document.getElementById('taler-value').textContent = formatNumber(talerPrice);
+                    updateAllCalculations();
+                }
+                
+                display.classList.remove('hidden');
+                edit.classList.add('hidden');
+                button.textContent = 'Bearbeiten';
+            }
+        }
+
+        function updateItem(category, id, field, value) {
+            const item = itemsData[category].find(item => item.id === id);
+            if (item) {
+                item[field] = value;
+                updateItemRow(category, item);
+            }
+        }
+
+        function updateItemRow(category, item) {
+            const row = document.getElementById(`item-${category}-${item.id}`);
+            if (!row) return;
+            
+            const { cost, profit, pct, revenue } = profitFor(item);
+            
+            // Update die Zellen mit den berechneten Werten
+            const costCell = row.querySelector('.cost-cell');
+            const revenueCell = row.querySelector('.revenue-cell');
+            const profitCell = row.querySelector('.profit-cell');
+            
+            if (costCell) costCell.textContent = formatNumber(cost);
+            if (revenueCell) revenueCell.textContent = formatNumber(revenue);
+            
+            if (profitCell) {
+                profitCell.textContent = `${formatNumber(profit)} (${pct.toFixed(2)}%)`;
+                profitCell.className = `p-2 align-top font-semibold ${profit >= 0 ? 'profit-positive' : 'profit-negative'} profit-cell`;
+            }
+        }
+
+        function updateAllCalculations() {
+            for (const [category, items] of Object.entries(itemsData)) {
+                for (const item of items) {
+                    updateItemRow(category, item);
+                }
+            }
+        }
+
+        // Initialisierung
+        function initializeApp() {
+            const container = document.getElementById('items-container');
+            
+            for (const [category, items] of Object.entries(itemsData)) {
+                const section = document.createElement('section');
+                section.className = 'mb-10';
+                
+                section.innerHTML = `
+                    <h2 class="text-2xl font-bold text-orange-400 border-b border-gray-700 pb-2 mb-4">${category}</h2>
+                    <div class="bg-gray-800 border border-gray-700 shadow-lg rounded p-4">
+                        <table class="w-full text-left table-auto border-collapse">
+                            <thead>
+                                <tr class="text-xs text-gray-400 border-b border-gray-700 uppercase">
+                                    <th class="p-2">Item</th>
+                                    <th class="p-2">Menge Einkauf</th>
+                                    <th class="p-2">Menge Verkauf</th>
+                                    <th class="p-2">Kosten (Taler)</th>
+                                    <th class="p-2">Einkauf (Gold)</th>
+                                    <th class="p-2">Wiederverkauf (Gold)</th>
+                                    <th class="p-2">Gewinn / Verlust</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-${category}">
+                                <!-- Items werden hier eingefügt -->
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                container.appendChild(section);
+                
+                const tbody = document.getElementById(`tbody-${category}`);
+                
+                for (const item of items) {
+                    const { cost, profit, pct, revenue } = profitFor(item);
+                    
+                    const row = document.createElement('tr');
+                    row.id = `item-${category}-${item.id}`;
+                    row.className = 'border-b border-gray-700 hover:bg-gray-700/40';
+                    
+                    row.innerHTML = `
+                        <td class="p-2 align-top w-48">
+                            <input
+                                class="w-full bg-transparent outline-none text-yellow-300 item-name"
+                                value="${item.name}"
+                            />
+                        </td>
+                        <td class="p-2 align-top w-24">
+                            <input
+                                type="number"
+                                min="1"
+                                class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 buy-amount"
+                                value="${item.buyAmount}"
+                            />
+                        </td>
+                        <td class="p-2 align-top w-24">
+                            <input
+                                type="number"
+                                min="1"
+                                class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 sell-amount"
+                                value="${item.sellAmount}"
+                            />
+                        </td>
+                        <td class="p-2 align-top w-24">
+                            <input
+                                type="number"
+                                min="0"
+                                class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 taler-cost"
+                                value="${item.talerCost}"
+                            />
+                        </td>
+                        <td class="p-2 align-top text-yellow-400 cost-cell">${formatNumber(cost)}</td>
+                        <td class="p-2 align-top">
+                            <input
+                                type="text"
+                                class="w-full border border-gray-600 bg-gray-900 text-right text-yellow-300 rounded px-2 py-1 resale-gold"
+                                value="${formatNumber(item.resaleGold)}"
+                            />
+                        </td>
+                        <td class="p-2 align-top font-semibold ${profit >= 0 ? 'profit-positive' : 'profit-negative'} profit-cell">
+                            ${formatNumber(profit)} (${pct.toFixed(2)}%)
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                    
+                    // Event-Listener für die Eingabefelder
+                    const nameInput = row.querySelector('.item-name');
+                    const buyAmountInput = row.querySelector('.buy-amount');
+                    const sellAmountInput = row.querySelector('.sell-amount');
+                    const talerCostInput = row.querySelector('.taler-cost');
+                    const resaleGoldInput = row.querySelector('.resale-gold');
+                    
+                    nameInput.addEventListener('input', (e) => {
+                        updateItem(category, item.id, 'name', e.target.value);
+                    });
+                    
+                    buyAmountInput.addEventListener('input', (e) => {
+                        updateItem(category, item.id, 'buyAmount', parseInt(e.target.value) || 1);
+                        updateItemRow(category, item);
+                    });
+                    
+                    sellAmountInput.addEventListener('input', (e) => {
+                        updateItem(category, item.id, 'sellAmount', parseInt(e.target.value) || 1);
+                        updateItemRow(category, item);
+                    });
+                    
+                    talerCostInput.addEventListener('input', (e) => {
+                        updateItem(category, item.id, 'talerCost', parseInt(e.target.value) || 0);
+                        updateItemRow(category, item);
+                    });
+                    
+                    resaleGoldInput.addEventListener('input', (e) => {
+                        const value = parseNumber(e.target.value);
+                        if (!isNaN(value)) {
+                            updateItem(category, item.id, 'resaleGold', value);
+                            updateItemRow(category, item);
+                        }
+                    });
+                }
+            }
+            
+            // Event-Listener für den Taler-Edit-Button
+            document.getElementById('edit-taler-btn').addEventListener('click', toggleTalerEdit);
+            
+            // Event-Listener für die Taler-Eingabe (Enter-Taste)
+            document.getElementById('taler-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    toggleTalerEdit();
+                }
+            });
+        }
+
+        // App starten
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
 </html>
