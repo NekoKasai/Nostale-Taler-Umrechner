@@ -40,6 +40,6 @@ Ein benutzerfreundlicher Rechner zur Berechnung von Gewinn und Verlust beim Hand
 ### 💻 Lokale Installation
 ```bash
 # Repository klonen
-git clone https://github.com/deinusername/taler-rechner.git
+git clone https://github.com/NekoKasai/Nostale-Taler-Umrechner.git
 
 # Oder einfach alles herunterladen und  index.html  öffnen
