@@ -3,6 +3,7 @@ import React, { useState } from "react";
 export default function TalerRechner() {
   const [talerPrice, setTalerPrice] = useState(120000);
   const [editingTaler, setEditingTaler] = useState(false);
+  // ... dein restlicher Code bleibt gleich
 
   const [items, setItems] = useState({
     Komfort: [
