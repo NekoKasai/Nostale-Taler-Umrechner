@@ -8,6 +8,15 @@ export default function TalerRechner() {
     Komfort: [
       { id: 1, name: "Goldener Kartenhalter", talerCost: 100, resaleGold: 11990000, buyAmount: 1, sellAmount: 1 },
       { id: 5, name: "NosHändlerMedaille", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+      { id: 6, name: "Haustierperle", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+      { id: 7, name: "Partnerspezialistenkartenhalter", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+      { id: 8, name: "Partnerperle", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+      { id: 9, name: "Feenperle", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+      { id: 10, name: "Parfüm (20 Stück)", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+      { id: 11, name: "Lautsprecher (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+      { id: 12, name: "Hochzeitsbox", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+      { id: 13, name: "Sprechblase (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+      { id: 14, name: "Flügel der Freundschaft (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
     ],
     Verstärkung: [
       { id: 2, name: "Verstärkungsstein A", talerCost: 50, resaleGold: 5900000, buyAmount: 1, sellAmount: 1 },
@@ -40,82 +49,33 @@ export default function TalerRechner() {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #1f2937, #111827, #000)',
-      color: '#f3f4f6',
-      padding: '1.5rem',
-      fontFamily: 'sans-serif'
-    }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <header style={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '1rem',
-          marginBottom: '1.5rem'
-        }}>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-100 p-6 font-sans">
+      <div className="max-w-6xl mx-auto">
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
           <div>
-            <h1 style={{ 
-              fontSize: '1.875rem', 
-              fontWeight: '800', 
-              color: '#fbbf24',
-              margin: 0
-            }}>
-              Gold ↔ Taler Rechner
-            </h1>
-            <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: 0 }}>
-              Berechne Gewinn & Verlust für Mall-Items
-            </p>
+            <h1 className="text-3xl font-extrabold leading-tight text-yellow-400">Gold ↔ Taler Rechner</h1>
+            <p className="text-sm text-gray-400">Berechne Gewinn & Verlust für Mall-Items — mit Mengenangabe.</p>
           </div>
 
-          <div style={{ 
-            backgroundColor: '#374151',
-            border: '1px solid #4b5563',
-            borderRadius: '0.375rem',
-            padding: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem'
-          }}>
+          <div className="bg-gray-800 border border-gray-700 shadow rounded p-4 flex flex-col sm:flex-row items-center gap-4">
             <div>
-              <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
-                Talerpreis (1 Taler =)
-              </div>
+              <div className="text-xs text-gray-400">Talerpreis (1 Taler =)</div>
               {!editingTaler ? (
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                  <div style={{ fontSize: '1.25rem', fontWeight: '600', color: '#fb923c' }}>
-                    {talerPrice.toLocaleString('de-DE')}
-                  </div>
-                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Gold</div>
+                <div className="flex items-baseline gap-2">
+                  <div className="text-xl font-semibold text-orange-400">{talerPrice.toLocaleString('de-DE')}</div>
+                  <div className="text-sm text-gray-500">Gold</div>
                 </div>
               ) : (
                 <input
                   type="number"
                   value={talerPrice}
                   onChange={(e) => setTalerPrice(Number(e.target.value))}
-                  style={{
-                    width: '8rem',
-                    border: '1px solid '#4b5563',
-                    backgroundColor: '#111827',
-                    color: '#fbbf24',
-                    borderRadius: '0.25rem',
-                    padding: '0.25rem 0.5rem'
-                  }}
+                  className="w-32 border border-gray-600 bg-gray-900 text-yellow-300 rounded px-2 py-1"
                 />
               )}
             </div>
             <button
-              style={{
-                padding: '0.25rem 0.75rem',
-                background: 'linear-gradient(to right, #f97316, #fbbf24)',
-                color: 'black',
-                fontWeight: '600',
-                borderRadius: '0.375rem',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.875rem'
-              }}
+              className="px-3 py-1 bg-gradient-to-r from-orange-500 to-yellow-400 text-black font-semibold rounded text-sm hover:opacity-90 transition"
               onClick={() => setEditingTaler((s) => !s)}
             >
               {editingTaler ? "Speichern" : "Bearbeiten"}
@@ -124,113 +84,63 @@ export default function TalerRechner() {
         </header>
 
         {Object.entries(items).map(([category, list]) => (
-          <section key={category} style={{ marginBottom: '2.5rem' }}>
-            <h2 style={{ 
-              fontSize: '1.5rem', 
-              fontWeight: '700', 
-              color: '#fb923c',
-              borderBottom: '1px solid #374151',
-              paddingBottom: '0.5rem',
-              marginBottom: '1rem'
-            }}>
-              {category}
-            </h2>
+          <section key={category} className="mb-10">
+            <h2 className="text-2xl font-bold text-orange-400 border-b border-gray-700 pb-2 mb-4">{category}</h2>
 
-            <div style={{ 
-              backgroundColor: '#374151',
-              border: '1px solid '#4b5563',
-              borderRadius: '0.5rem',
-              padding: '1rem'
-            }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="bg-gray-800 border border-gray-700 shadow-lg rounded p-4">
+              <table className="w-full text-left table-auto border-collapse">
                 <thead>
-                  <tr style={{ 
-                    fontSize: '0.75rem',
-                    color: '#9ca3af',
-                    borderBottom: '1px solid '#4b5563',
-                    textTransform: 'uppercase'
-                  }}>
-                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Item</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Menge Einkauf</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Menge Verkauf</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Kosten (Taler)</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Einkauf (Gold)</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Wiederverkauf (Gold)</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Gewinn / Verlust</th>
+                  <tr className="text-xs text-gray-400 border-b border-gray-700 uppercase">
+                    <th className="p-2">Item</th>
+                    <th className="p-2">Menge Einkauf</th>
+                    <th className="p-2">Menge Verkauf</th>
+                    <th className="p-2">Kosten (Taler)</th>
+                    <th className="p-2">Einkauf (Gold)</th>
+                    <th className="p-2">Wiederverkauf (Gold)</th>
+                    <th className="p-2">Gewinn / Verlust</th>
                   </tr>
                 </thead>
                 <tbody>
                   {list.map((it) => {
                     const { cost, profit, pct, revenue } = profitFor(it);
                     return (
-                      <tr key={it.id} style={{ 
-                        borderBottom: '1px solid '#4b5563'
-                      }}>
-                        <td style={{ padding: '0.5rem' }}>
+                      <tr key={it.id} className="border-b border-gray-700 hover:bg-gray-700/40">
+                        <td className="p-2 align-top w-48">
                           <input
+                            className="w-full bg-transparent outline-none text-yellow-300"
                             value={it.name}
                             onChange={(e) => updateItem(category, it.id, { name: e.target.value })}
-                            style={{
-                              width: '100%',
-                              background: 'transparent',
-                              border: 'none',
-                              outline: 'none',
-                              color: '#fbbf24'
-                            }}
                           />
                         </td>
-                        <td style={{ padding: '0.5rem' }}>
+                        <td className="p-2 align-top w-24">
                           <input
                             type="number"
                             min={1}
                             value={it.buyAmount}
                             onChange={(e) => updateItem(category, it.id, { buyAmount: Number(e.target.value) })}
-                            style={{
-                              width: '5rem',
-                              border: '1px solid '#4b5563',
-                              backgroundColor: '#111827',
-                              color: '#fb923c',
-                              borderRadius: '0.25rem',
-                              padding: '0.25rem 0.5rem'
-                            }}
+                            className="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1"
                           />
                         </td>
-                        <td style={{ padding: '0.5rem' }}>
+                        <td className="p-2 align-top w-24">
                           <input
                             type="number"
                             min={1}
                             value={it.sellAmount}
                             onChange={(e) => updateItem(category, it.id, { sellAmount: Number(e.target.value) })}
-                            style={{
-                              width: '5rem',
-                              border: '1px solid '#4b5563',
-                              backgroundColor: '#111827',
-                              color: '#fb923c',
-                              borderRadius: '0.25rem',
-                              padding: '0.25rem 0.5rem'
-                            }}
+                            className="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1"
                           />
                         </td>
-                        <td style={{ padding: '0.5rem' }}>
+                        <td className="p-2 align-top w-24">
                           <input
                             type="number"
                             min={0}
                             value={it.talerCost}
                             onChange={(e) => updateItem(category, it.id, { talerCost: Number(e.target.value) })}
-                            style={{
-                              width: '5rem',
-                              border: '1px solid '#4b5563',
-                              backgroundColor: '#111827',
-                              color: '#fb923c',
-                              borderRadius: '0.25rem',
-                              padding: '0.25rem 0.5rem'
-                            }}
+                            className="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1"
                           />
                         </td>
-                        <td style={{ padding: '0.5rem', color: '#fbbf24' }}>
-                          {cost.toLocaleString('de-DE')}
-                        </td>
-                        <td style={{ padding: '0.5rem' }}>
+                        <td className="p-2 align-top text-yellow-400">{cost.toLocaleString('de-DE')}</td>
+                        <td className="p-2 align-top">
                           <input
                             type="text"
                             value={Number(it.resaleGold).toLocaleString('de-DE')}
@@ -238,22 +148,10 @@ export default function TalerRechner() {
                               const val = Number(e.target.value.replace(/\./g, '').replace(/,/g, '.'));
                               if (!isNaN(val)) updateItem(category, it.id, { resaleGold: val });
                             }}
-                            style={{
-                              width: '100%',
-                              border: '1px solid '#4b5563',
-                              backgroundColor: '#111827',
-                              textAlign: 'right',
-                              color: '#fbbf24',
-                              borderRadius: '0.25rem',
-                              padding: '0.25rem 0.5rem'
-                            }}
+                            className="w-full border border-gray-600 bg-gray-900 text-right text-yellow-300 rounded px-2 py-1"
                           />
                         </td>
-                        <td style={{ 
-                          padding: '0.5rem',
-                          fontWeight: '600',
-                          color: profit >= 0 ? '#10b981' : '#ef4444'
-                        }}>
+                        <td className={`p-2 align-top font-semibold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                           {profit.toLocaleString('de-DE')} ({pct.toFixed(2)}%)
                         </td>
                       </tr>
@@ -265,7 +163,7 @@ export default function TalerRechner() {
           </section>
         ))}
 
-        <footer style={{ marginTop: '1.5rem', fontSize: '0.875rem', color: '#6b7280', textAlign: 'center' }}>
+        <footer className="mt-6 text-sm text-gray-500 text-center">
           <p>
             Hinweis: Diese App rechnet direkt mit den eingegebenen Zahlen. Behalte Transaktionskosten
             / Gebühren im Kopf – sie werden hier nicht automatisch berücksichtigt.
@@ -275,3 +173,4 @@ export default function TalerRechner() {
     </div>
   );
 }
+
