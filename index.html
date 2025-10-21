@@ -6,7 +6,6 @@
     <title>Gold ↔ Taler Rechner</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Zusätzliche benutzerdefinierte Stile für bessere Kompatibilität */
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -21,46 +20,136 @@
         .profit-negative {
             color: #F87171;
         }
+        .favorite-star {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .favorite-star:hover {
+            transform: scale(1.2);
+        }
+        .favorited {
+            color: #FBBF24;
+        }
+        .category-header {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            border-left: 4px solid #f59e0b;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .category-header:hover {
+            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+        }
+        .category-content {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        .search-highlight {
+            background-color: #f59e0b;
+            color: #1f2937;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-100 p-6 font-sans">
-    <div class="max-w-6xl mx-auto">
-        <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-            <div>
+<body class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-100 p-4 font-sans">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
+            <div class="flex-1">
                 <h1 class="text-3xl font-extrabold leading-tight text-yellow-400">Gold ↔ Taler Rechner</h1>
                 <p class="text-sm text-gray-400">Berechne Gewinn & Verlust für Mall-Items — mit Mengenangabe.</p>
             </div>
 
-            <div class="bg-gray-800 border border-gray-700 shadow rounded p-4 flex flex-col sm:flex-row items-center gap-4">
-                <div>
-                    <div class="text-xs text-gray-400">Talerpreis (1 Taler =)</div>
-                    <div id="taler-display" class="flex items-baseline gap-2">
-                        <div class="text-xl font-semibold text-orange-400" id="taler-value">120.000</div>
-                        <div class="text-sm text-gray-500">Gold</div>
-                    </div>
-                    <div id="taler-edit" class="hidden">
-                        <input
-                            type="number"
-                            id="taler-input"
-                            class="w-32 border border-gray-600 bg-gray-900 text-yellow-300 rounded px-2 py-1"
-                            value="120000"
-                        />
+            <!-- Suchleiste -->
+            <div class="w-full lg:w-64">
+                <div class="relative">
+                    <input
+                        type="text"
+                        id="search-input"
+                        placeholder="Items suchen..."
+                        class="w-full bg-gray-800 border border-gray-700 text-gray-100 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                    >
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                     </div>
                 </div>
-                <button
-                    id="edit-taler-btn"
-                    class="px-3 py-1 bg-gradient-to-r from-orange-500 to-yellow-400 text-black font-semibold rounded text-sm hover:opacity-90 transition"
-                >
-                    Bearbeiten
-                </button>
+            </div>
+
+            <!-- Taler-Preis Bereich -->
+            <div class="bg-gray-800 border border-gray-700 shadow rounded-lg p-4">
+                <div class="flex items-center gap-4">
+                    <div class="flex-1">
+                        <div class="text-xs text-gray-400 mb-1">Talerpreis (1 Taler = X Gold)</div>
+                        <div id="taler-display" class="flex items-baseline gap-2">
+                            <div class="text-xl font-semibold text-orange-400" id="taler-value">120.000</div>
+                            <div class="text-sm text-gray-500">Gold</div>
+                        </div>
+                        <div id="taler-edit" class="hidden mt-2">
+                            <div class="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    id="taler-input"
+                                    class="flex-1 border border-gray-600 bg-gray-900 text-yellow-300 rounded px-3 py-2"
+                                    value="120000"
+                                />
+                                <button
+                                    onclick="saveTalerPrice()"
+                                    class="px-3 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition"
+                                >
+                                    OK
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        id="edit-taler-btn"
+                        class="px-4 py-2 bg-gradient-to-r from-orange-500 to-yellow-400 text-black font-semibold rounded text-sm hover:opacity-90 transition whitespace-nowrap"
+                    >
+                        Preis ändern
+                    </button>
+                </div>
             </div>
         </header>
+
+        <!-- Favoriten Bereich -->
+        <section id="favorites-section" class="mb-10 hidden">
+            <div class="category-header rounded-t-lg p-4 mb-0">
+                <h2 class="text-2xl font-bold text-yellow-400 flex items-center gap-2">
+                    <span>⭐ Favoriten</span>
+                    <span class="text-sm font-normal text-gray-300" id="favorites-count"></span>
+                </h2>
+            </div>
+            <div class="bg-gray-800 border border-gray-700 shadow-lg rounded-b-lg p-4">
+                <table class="w-full text-left table-auto border-collapse">
+                    <thead>
+                        <tr class="text-xs text-gray-400 border-b border-gray-700 uppercase">
+                            <th class="p-2 w-8"></th>
+                            <th class="p-2">Item</th>
+                            <th class="p-2">Menge Einkauf</th>
+                            <th class="p-2">Kosten (Taler)</th>
+                            <th class="p-2">Menge Verkauf</th>
+                            <th class="p-2">Einkauf (Gold)</th>
+                            <th class="p-2">Wiederverkauf (Gold)</th>
+                            <th class="p-2">Gewinn / Verlust</th>
+                            <th class="p-2 w-8"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="favorites-tbody">
+                        <!-- Favoriten Items werden hier eingefügt -->
+                    </tbody>
+                </table>
+                <div id="no-favorites" class="text-center py-8 text-gray-500">
+                    Noch keine Favoriten gesetzt. Klicke auf den Stern neben einem Item, um es zu favorisieren.
+                </div>
+            </div>
+        </section>
 
         <div id="items-container">
             <!-- Hier werden die Kategorien und Items dynamisch eingefügt -->
         </div>
 
-        <footer class="mt-6 text-sm text-gray-500 text-center">
+        <footer class="mt-8 text-sm text-gray-500 text-center border-t border-gray-700 pt-4">
             <p>
                 Hinweis: Diese App rechnet direkt mit den eingegebenen Zahlen. Behalte Transaktionskosten
                 / Gebühren im Kopf – sie werden hier nicht automatisch berücksichtigt.
@@ -69,56 +158,134 @@
     </div>
 
     <script>
-        // Datenstruktur
-        const itemsData = {
-            Komfort: [
-                { id: 1, name: "Goldener Kartenhalter", talerCost: 100, resaleGold: 11990000, buyAmount: 1, sellAmount: 1 },
-                { id: 5, name: "NosHändlerMedaille", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 6, name: "Haustierperle", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 7, name: "Partnerspezialistenkartenhalter", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 8, name: "Partnerperle", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 9, name: "Feenperle", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 10, name: "Parfüm (20 Stück)", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 11, name: "Lautsprecher (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 12, name: "Hochzeitsbox", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 13, name: "Sprechblase (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 14, name: "Flügel der Freundschaft (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+        // Datenstruktur mit neuen Kategorien
+        let itemsData = {
+            Handel: [
+                { id: 1, name: "NosHändlerMedaille", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 2, name: "Goldener Kartenhalter", talerCost: 100, resaleGold: 11990000, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 3, name: "Haustierperle", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 4, name: "Partnerspezialistenkartenhalter", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 5, name: "Partnerperle", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 6, name: "Feenperle", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 7, name: "Parfüm (20 Stück)", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 8, name: "Reittierperle", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
             ],
-            Verstärkung: [
-                { id: 2, name: "Verstärkungsstein A", talerCost: 50, resaleGold: 5900000, buyAmount: 1, sellAmount: 1 },
+            Kommunikation: [
+                { id: 9, name: "Trennungsbrief", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 10, name: "Hochzeitsbox", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 11, name: "Lautsprecher (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 12, name: "Sprechblase (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 13, name: "Magische Lampe", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 14, name: "Flügel der Freundschaft (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+            ],
+            Aufbewahrung: [
+                { id: 15, name: "Abenteurerrucksack (30 Tage)", talerCost: 20, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 16, name: "Abenteurerrucksack (60 Tage)", talerCost: 40, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 17, name: "Abenteurerrucksack (unbegrenzt)", talerCost: 200, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 18, name: "Inventar-Erweiterungsticket (30 Tage)", talerCost: 75, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 19, name: "Inventar-Erweiterungsticket (60 Tage)", talerCost: 150, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 20, name: "Inventar-Erweiterungsticket (Unbegrenzt)", talerCost: 750, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 21, name: "Riesiges Warenhaus", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 22, name: "Geräumiges Warenlager", talerCost: 175, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 23, name: "Gigantisches Warenlager", talerCost: 225, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 24, name: "Partnerrucksack (30 Tage)", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 25, name: "Partnerrucksack (60 Tage)", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 26, name: "Partnerrucksack (Unbegrenzt)", talerCost: 200, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 27, name: "Haustierkorb (10 Tage)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 28, name: "Haustierkorb (30 Tage)", talerCost: 15, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 29, name: "Haustierkorb (60 Tage)", talerCost: 30, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 30, name: "Haustierkorb (Unbegrenzt)", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 31, name: "Petslot-Erweiterung", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+            ],
+            Leveln: [
+                { id: 32, name: "Tarotkartenspiel", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 33, name: "Segen des Seelensteins (10 Stück)", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 34, name: "Versiegelte Gefäße (10 Stück)", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 35, name: "Ancelloan Segen", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 36, name: "FXP-Booster (7 Tage)", talerCost: 290, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 37, name: "FXP-Booster (3 Tage)", talerCost: 130, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 38, name: "FXP-Booster (1 Tag)", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 39, name: "Cylloan Quellwasser (10 Stück)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 40, name: "Trank der Würde", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+            ],
+            Minispiele: [
+                { id: 41, name: "Produktionscoupon (10 Stück)", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 42, name: "Haltbarkeitscoupon (40 Stück)", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 43, name: "Belohnungscoupon (10 Stück)", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
             ],
             Begleiter: [
-                { id: 3, name: "Begleiter-Futterpaket", talerCost: 20, resaleGold: 1800000, buyAmount: 1, sellAmount: 1 },
+                { id: 44, name: "Partnerskillticket (einzeln)", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 45, name: "Partnerskillticket (alle)", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 46, name: "Feen - Rücksetzungsset", talerCost: 80, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 47, name: "Goldenes Werkzeug", talerCost: 65, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 48, name: "Feenwandler", talerCost: 30, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 49, name: "Feenschutzrolle", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 50, name: "Feenverstärker", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 51, name: "Feen - Erfahrungstrank (10 Stück)", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 52, name: "Feen - Reset Hammer", talerCost: 60, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 53, name: "Edles Haustierfutter (5 Stück)", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 54, name: "Medizin für Partner (55 Stück)", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 55, name: "NosMate-Beschwörungsbuch", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 56, name: "Segen des Schutzengels (10 Stück)", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
             ],
-            Aussehen: [
-                { id: 4, name: "Stylisches Kostüm", talerCost: 80, resaleGold: 9500000, buyAmount: 1, sellAmount: 1 },
+            Spezialisten: [
+                { id: 57, name: "Hohe SP-Schutzrolle (2 Stück)", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 58, name: "Niedrige SP-Schutzrolle (2 Stück)", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 59, name: "Drachen-Kartenschutzrolle (2 Stück)", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 60, name: "Punkteinitialisierungstrank", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 61, name: "Seelenbelebungsstein", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
             ],
-            Versteckung: [
-                { id: 15, name: "Cellon-Entferner", talerCost: 75, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 16, name: "Tattoo-Wechsel-Schriftrolle (zufällig)", talerCost: 60, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 17, name: "Loa-Wechsel-Kristall", talerCost: 60, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 18, name: "Premium-Runen-Upgraderolle", talerCost: 30, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 19, name: "Amulett des Segens", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 20, name: "Goldene Ausrüstungsschutzrolle", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 21, name: "Ausrüstungsschutzrolle", talerCost: 20, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 22, name: "Amulett des Schutzes", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 23, name: "Tarotkartenspiel", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 24, name: "Schriftrolle der Freisetzung", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 25, name: "Amulett der Verstärkung", talerCost: 5, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 26, name: "Heldenhaftes Amulett des Segens (Statisch)", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 27, name: "Heldenhaftes Amulett des Segens (Zufall)", talerCost: 75, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 28, name: "Reparatur-Runenamboss", talerCost: 10, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 29, name: "Runenentfernungs-Hammer", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 30, name: "Glücksrunen-Schriftrolle", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 31, name: "Tattoo-Speicherschriftrolle", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 32, name: "Tattoo-Entferner", talerCost: 35, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
-                { id: 33, name: "Runenpolitur", talerCost: 60, resaleGold: 0, buyAmount: 1, sellAmount: 1 },
+            Muscheln: [
+                { id: 62, name: "Muschel-Aufwertungspolitur", talerCost: 100, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 63, name: "Muschel-Aufwertungsreiniger", talerCost: 60, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 64, name: "Muschel-Aufwertungsschutzrolle", talerCost: 50, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
             ],
+            "Tattoo und Runen": [
+                { id: 65, name: "Tattoo-Wechsel-Schriftrolle (zufällig)", talerCost: 60, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 66, name: "Loa-Wechsel-Kristall", talerCost: 60, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 67, name: "Premium-Runen-Upgraderolle", talerCost: 30, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 68, name: "Glücksrunen-Schriftrolle", talerCost: 25, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+                { id: 69, name: "Runenpolitur", talerCost: 60, resaleGold: 0, buyAmount: 1, sellAmount: 1, isFavorite: false },
+            ]
         };
+
+        // Daten aus localStorage laden
+        function loadData() {
+            const saved = localStorage.getItem('talerRechnerData');
+            if (saved) {
+                const parsedData = JSON.parse(saved);
+                Object.keys(itemsData).forEach(category => {
+                    if (parsedData[category]) {
+                        itemsData[category] = parsedData[category];
+                    }
+                });
+            }
+            
+            const savedTalerPrice = localStorage.getItem('talerPrice');
+            if (savedTalerPrice) {
+                talerPrice = parseInt(savedTalerPrice);
+                document.getElementById('taler-value').textContent = formatNumber(talerPrice);
+            }
+            
+            const savedCollapsed = localStorage.getItem('collapsedCategories');
+            if (savedCollapsed) {
+                collapsedCategories = JSON.parse(savedCollapsed);
+            }
+        }
+
+        // Daten in localStorage speichern
+        function saveData() {
+            localStorage.setItem('talerRechnerData', JSON.stringify(itemsData));
+            localStorage.setItem('talerPrice', talerPrice.toString());
+            localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
+        }
 
         // Globale Variablen
         let talerPrice = 120000;
         let isEditingTaler = false;
+        let nextItemId = 1000;
+        let collapsedCategories = {};
+        let searchTerm = '';
 
         // Hilfsfunktionen
         function formatNumber(num) {
@@ -141,6 +308,12 @@
             return { cost, profit, pct, revenue };
         }
 
+        function highlightText(text, search) {
+            if (!search) return text;
+            const regex = new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return text.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
         // UI-Funktionen
         function toggleTalerEdit() {
             isEditingTaler = !isEditingTaler;
@@ -152,25 +325,31 @@
             if (isEditingTaler) {
                 display.classList.add('hidden');
                 edit.classList.remove('hidden');
-                button.textContent = 'Speichern';
+                button.textContent = 'Abbrechen';
                 
                 const input = document.getElementById('taler-input');
                 input.value = talerPrice;
                 input.focus();
+                input.select();
             } else {
-                const input = document.getElementById('taler-input');
-                const newPrice = parseInt(input.value);
-                
-                if (!isNaN(newPrice) && newPrice > 0) {
-                    talerPrice = newPrice;
-                    document.getElementById('taler-value').textContent = formatNumber(talerPrice);
-                    updateAllCalculations();
-                }
-                
                 display.classList.remove('hidden');
                 edit.classList.add('hidden');
-                button.textContent = 'Bearbeiten';
+                button.textContent = 'Preis ändern';
             }
+        }
+
+        function saveTalerPrice() {
+            const input = document.getElementById('taler-input');
+            const newPrice = parseInt(input.value);
+            
+            if (!isNaN(newPrice) && newPrice > 0) {
+                talerPrice = newPrice;
+                document.getElementById('taler-value').textContent = formatNumber(talerPrice);
+                updateAllCalculations();
+                saveData();
+            }
+            
+            toggleTalerEdit();
         }
 
         function updateItem(category, id, field, value) {
@@ -178,6 +357,11 @@
             if (item) {
                 item[field] = value;
                 updateItemRow(category, item);
+                saveData();
+                
+                if (item.isFavorite) {
+                    updateFavoritesDisplay();
+                }
             }
         }
 
@@ -187,17 +371,27 @@
             
             const { cost, profit, pct, revenue } = profitFor(item);
             
-            // Update die Zellen mit den berechneten Werten
             const costCell = row.querySelector('.cost-cell');
             const revenueCell = row.querySelector('.revenue-cell');
             const profitCell = row.querySelector('.profit-cell');
+            const favoriteStar = row.querySelector('.favorite-star');
             
             if (costCell) costCell.textContent = formatNumber(cost);
             if (revenueCell) revenueCell.textContent = formatNumber(revenue);
             
             if (profitCell) {
-                profitCell.textContent = `${formatNumber(profit)} (${pct.toFixed(2)}%)`;
-                profitCell.className = `p-2 align-top font-semibold ${profit >= 0 ? 'profit-positive' : 'profit-negative'} profit-cell`;
+                if (item.resaleGold > 0) {
+                    profitCell.textContent = `${formatNumber(profit)} (${pct.toFixed(2)}%)`;
+                    profitCell.className = `p-2 align-top font-semibold ${profit >= 0 ? 'profit-positive' : 'profit-negative'} profit-cell`;
+                } else {
+                    profitCell.textContent = '-';
+                    profitCell.className = 'p-2 align-top text-gray-500 profit-cell';
+                }
+            }
+            
+            if (favoriteStar) {
+                favoriteStar.className = `favorite-star ${item.isFavorite ? 'favorited' : 'text-gray-500'}`;
+                favoriteStar.textContent = item.isFavorite ? '★' : '☆';
             }
         }
 
@@ -207,57 +401,65 @@
                     updateItemRow(category, item);
                 }
             }
+            updateFavoritesDisplay();
         }
 
-        // Initialisierung
-        function initializeApp() {
-            const container = document.getElementById('items-container');
+        function toggleFavorite(category, id) {
+            const item = itemsData[category].find(item => item.id === id);
+            if (item) {
+                item.isFavorite = !item.isFavorite;
+                updateItemRow(category, item);
+                updateFavoritesDisplay();
+                saveData();
+            }
+        }
+
+        function deleteItem(category, id) {
+            if (confirm('Möchtest du dieses Item wirklich löschen?')) {
+                itemsData[category] = itemsData[category].filter(item => item.id !== id);
+                renderCategory(category);
+                updateFavoritesDisplay();
+                saveData();
+            }
+        }
+
+        function updateFavoritesDisplay() {
+            const favoritesSection = document.getElementById('favorites-section');
+            const favoritesTbody = document.getElementById('favorites-tbody');
+            const noFavorites = document.getElementById('no-favorites');
+            const favoritesCount = document.getElementById('favorites-count');
             
+            const favorites = [];
             for (const [category, items] of Object.entries(itemsData)) {
-                const section = document.createElement('section');
-                section.className = 'mb-10';
-                
-                section.innerHTML = `
-                    <h2 class="text-2xl font-bold text-orange-400 border-b border-gray-700 pb-2 mb-4">${category}</h2>
-                    <div class="bg-gray-800 border border-gray-700 shadow-lg rounded p-4">
-                        <table class="w-full text-left table-auto border-collapse">
-                            <thead>
-                                <tr class="text-xs text-gray-400 border-b border-gray-700 uppercase">
-                                    <th class="p-2">Item</th>
-                                    <th class="p-2">Menge Einkauf</th>
-                                    <th class="p-2">Menge Verkauf</th>
-                                    <th class="p-2">Kosten (Taler)</th>
-                                    <th class="p-2">Einkauf (Gold)</th>
-                                    <th class="p-2">Wiederverkauf (Gold)</th>
-                                    <th class="p-2">Gewinn / Verlust</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-${category}">
-                                <!-- Items werden hier eingefügt -->
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-                
-                container.appendChild(section);
-                
-                const tbody = document.getElementById(`tbody-${category}`);
-                
                 for (const item of items) {
+                    if (item.isFavorite) {
+                        favorites.push({...item, category});
+                    }
+                }
+            }
+            
+            if (favorites.length > 0) {
+                favoritesSection.classList.remove('hidden');
+                noFavorites.classList.add('hidden');
+                favoritesCount.textContent = `(${favorites.length})`;
+                
+                favoritesTbody.innerHTML = '';
+                favorites.forEach(item => {
                     const { cost, profit, pct, revenue } = profitFor(item);
                     
                     const row = document.createElement('tr');
-                    row.id = `item-${category}-${item.id}`;
+                    row.id = `favorite-${item.category}-${item.id}`;
                     row.className = 'border-b border-gray-700 hover:bg-gray-700/40';
                     
                     row.innerHTML = `
-                        <td class="p-2 align-top w-48">
-                            <input
-                                class="w-full bg-transparent outline-none text-yellow-300 item-name"
-                                value="${item.name}"
-                            />
+                        <td class="p-2 align-top">
+                            <span class="favorite-star favorited" onclick="toggleFavorite('${item.category}', ${item.id})">★</span>
                         </td>
-                        <td class="p-2 align-top w-24">
+                        <td class="p-2 align-top">
+                            <div class="text-yellow-300">${highlightText(item.name, searchTerm)}</div>
+                            <div class="text-xs text-gray-500">${item.category}</div>
+                        </td>
+                        <td class="p-2 align-top">
                             <input
                                 type="number"
                                 min="1"
@@ -265,20 +467,20 @@
                                 value="${item.buyAmount}"
                             />
                         </td>
-                        <td class="p-2 align-top w-24">
-                            <input
-                                type="number"
-                                min="1"
-                                class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 sell-amount"
-                                value="${item.sellAmount}"
-                            />
-                        </td>
-                        <td class="p-2 align-top w-24">
+                        <td class="p-2 align-top">
                             <input
                                 type="number"
                                 min="0"
                                 class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 taler-cost"
                                 value="${item.talerCost}"
+                            />
+                        </td>
+                        <td class="p-2 align-top">
+                            <input
+                                type="number"
+                                min="1"
+                                class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 sell-amount"
+                                value="${item.sellAmount}"
                             />
                         </td>
                         <td class="p-2 align-top text-yellow-400 cost-cell">${formatNumber(cost)}</td>
@@ -289,58 +491,279 @@
                                 value="${formatNumber(item.resaleGold)}"
                             />
                         </td>
-                        <td class="p-2 align-top font-semibold ${profit >= 0 ? 'profit-positive' : 'profit-negative'} profit-cell">
-                            ${formatNumber(profit)} (${pct.toFixed(2)}%)
+                        <td class="p-2 align-top font-semibold ${item.resaleGold > 0 ? (profit >= 0 ? 'profit-positive' : 'profit-negative') : 'text-gray-500'} profit-cell">
+                            ${item.resaleGold > 0 ? `${formatNumber(profit)} (${pct.toFixed(2)}%)` : '-'}
+                        </td>
+                        <td class="p-2 align-top">
+                            <button onclick="deleteItem('${item.category}', ${item.id})" class="text-red-400 hover:text-red-300 transition">
+                                🗑️
+                            </button>
                         </td>
                     `;
                     
-                    tbody.appendChild(row);
+                    favoritesTbody.appendChild(row);
                     
-                    // Event-Listener für die Eingabefelder
-                    const nameInput = row.querySelector('.item-name');
                     const buyAmountInput = row.querySelector('.buy-amount');
                     const sellAmountInput = row.querySelector('.sell-amount');
                     const talerCostInput = row.querySelector('.taler-cost');
                     const resaleGoldInput = row.querySelector('.resale-gold');
                     
-                    nameInput.addEventListener('input', (e) => {
-                        updateItem(category, item.id, 'name', e.target.value);
-                    });
-                    
                     buyAmountInput.addEventListener('input', (e) => {
-                        updateItem(category, item.id, 'buyAmount', parseInt(e.target.value) || 1);
-                        updateItemRow(category, item);
+                        updateItem(item.category, item.id, 'buyAmount', parseInt(e.target.value) || 1);
                     });
                     
                     sellAmountInput.addEventListener('input', (e) => {
-                        updateItem(category, item.id, 'sellAmount', parseInt(e.target.value) || 1);
-                        updateItemRow(category, item);
+                        updateItem(item.category, item.id, 'sellAmount', parseInt(e.target.value) || 1);
                     });
                     
                     talerCostInput.addEventListener('input', (e) => {
-                        updateItem(category, item.id, 'talerCost', parseInt(e.target.value) || 0);
-                        updateItemRow(category, item);
+                        updateItem(item.category, item.id, 'talerCost', parseInt(e.target.value) || 0);
                     });
                     
                     resaleGoldInput.addEventListener('input', (e) => {
                         const value = parseNumber(e.target.value);
                         if (!isNaN(value)) {
-                            updateItem(category, item.id, 'resaleGold', value);
-                            updateItemRow(category, item);
+                            updateItem(item.category, item.id, 'resaleGold', value);
                         }
                     });
+                });
+            } else {
+                favoritesSection.classList.add('hidden');
+                noFavorites.classList.remove('hidden');
+                favoritesCount.textContent = '';
+            }
+        }
+
+        function addNewItem(category) {
+            const newItem = {
+                id: nextItemId++,
+                name: "Neues Item",
+                talerCost: 0,
+                resaleGold: 0,
+                buyAmount: 1,
+                sellAmount: 1,
+                isFavorite: false
+            };
+            
+            itemsData[category].push(newItem);
+            renderCategory(category);
+            saveData();
+            
+            setTimeout(() => {
+                const nameInput = document.getElementById(`item-${category}-${newItem.id}`)?.querySelector('.item-name');
+                if (nameInput) {
+                    nameInput.focus();
+                    nameInput.select();
                 }
+            }, 100);
+        }
+
+        function toggleCategory(category) {
+            collapsedCategories[category] = !collapsedCategories[category];
+            const content = document.getElementById(`content-${category}`);
+            const icon = document.getElementById(`icon-${category}`);
+            
+            if (collapsedCategories[category]) {
+                content.classList.add('hidden');
+                icon.textContent = '▶';
+            } else {
+                content.classList.remove('hidden');
+                icon.textContent = '▼';
+            }
+            saveData();
+        }
+
+        function performSearch() {
+            searchTerm = document.getElementById('search-input').value.toLowerCase();
+            renderAllCategories();
+            updateFavoritesDisplay();
+        }
+
+        function renderCategory(category) {
+            const container = document.getElementById(`tbody-${category}`);
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            let filteredItems = [...itemsData[category]];
+            
+            if (searchTerm) {
+                filteredItems = filteredItems.filter(item => 
+                    item.name.toLowerCase().includes(searchTerm)
+                );
             }
             
-            // Event-Listener für den Taler-Edit-Button
-            document.getElementById('edit-taler-btn').addEventListener('click', toggleTalerEdit);
+            const sortedItems = filteredItems.sort((a, b) => {
+                if (a.isFavorite && !b.isFavorite) return -1;
+                if (!a.isFavorite && b.isFavorite) return 1;
+                return 0;
+            });
             
-            // Event-Listener für die Taler-Eingabe (Enter-Taste)
+            sortedItems.forEach(item => {
+                const { cost, profit, pct, revenue } = profitFor(item);
+                
+                const row = document.createElement('tr');
+                row.id = `item-${category}-${item.id}`;
+                row.className = 'border-b border-gray-700 hover:bg-gray-700/40';
+                
+                row.innerHTML = `
+                    <td class="p-2 align-top w-8">
+                        <span class="favorite-star ${item.isFavorite ? 'favorited' : 'text-gray-500'}" onclick="toggleFavorite('${category}', ${item.id})">
+                            ${item.isFavorite ? '★' : '☆'}
+                        </span>
+                    </td>
+                    <td class="p-2 align-top w-48">
+                        <input
+                            class="w-full bg-transparent outline-none text-yellow-300 item-name"
+                            value="${item.name}"
+                        />
+                    </td>
+                    <td class="p-2 align-top w-24">
+                        <input
+                            type="number"
+                            min="1"
+                            class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 buy-amount"
+                            value="${item.buyAmount}"
+                        />
+                    </td>
+                    <td class="p-2 align-top w-24">
+                        <input
+                            type="number"
+                            min="0"
+                            class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 taler-cost"
+                            value="${item.talerCost}"
+                        />
+                    </td>
+                    <td class="p-2 align-top w-24">
+                        <input
+                            type="number"
+                            min="1"
+                            class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 sell-amount"
+                            value="${item.sellAmount}"
+                        />
+                    </td>
+                    <td class="p-2 align-top text-yellow-400 cost-cell">${formatNumber(cost)}</td>
+                    <td class="p-2 align-top">
+                        <input
+                            type="text"
+                            class="w-full border border-gray-600 bg-gray-900 text-right text-yellow-300 rounded px-2 py-1 resale-gold"
+                            value="${formatNumber(item.resaleGold)}"
+                        />
+                    </td>
+                    <td class="p-2 align-top font-semibold ${item.resaleGold > 0 ? (profit >= 0 ? 'profit-positive' : 'profit-negative') : 'text-gray-500'} profit-cell">
+                        ${item.resaleGold > 0 ? `${formatNumber(profit)} (${pct.toFixed(2)}%)` : '-'}
+                    </td>
+                    <td class="p-2 align-top">
+                        <button onclick="deleteItem('${category}', ${item.id})" class="text-red-400 hover:text-red-300 transition">
+                            🗑️
+                        </button>
+                    </td>
+                `;
+                
+                container.appendChild(row);
+                
+                const nameInput = row.querySelector('.item-name');
+                const buyAmountInput = row.querySelector('.buy-amount');
+                const sellAmountInput = row.querySelector('.sell-amount');
+                const talerCostInput = row.querySelector('.taler-cost');
+                const resaleGoldInput = row.querySelector('.resale-gold');
+                
+                nameInput.addEventListener('input', (e) => {
+                    updateItem(category, item.id, 'name', e.target.value);
+                });
+                
+                buyAmountInput.addEventListener('input', (e) => {
+                    updateItem(category, item.id, 'buyAmount', parseInt(e.target.value) || 1);
+                });
+                
+                sellAmountInput.addEventListener('input', (e) => {
+                    updateItem(category, item.id, 'sellAmount', parseInt(e.target.value) || 1);
+                });
+                
+                talerCostInput.addEventListener('input', (e) => {
+                    updateItem(category, item.id, 'talerCost', parseInt(e.target.value) || 0);
+                });
+                
+                resaleGoldInput.addEventListener('input', (e) => {
+                    const value = parseNumber(e.target.value);
+                    if (!isNaN(value)) {
+                        updateItem(category, item.id, 'resaleGold', value);
+                    }
+                });
+            });
+        }
+
+        function renderAllCategories() {
+            for (const category of Object.keys(itemsData)) {
+                renderCategory(category);
+            }
+        }
+
+        // Initialisierung
+        function initializeApp() {
+            loadData();
+            
+            const container = document.getElementById('items-container');
+            
+            for (const [category, items] of Object.entries(itemsData)) {
+                const section = document.createElement('section');
+                section.className = 'mb-6';
+                
+                section.innerHTML = `
+                    <div class="category-header rounded-lg p-4 mb-0" onclick="toggleCategory('${category}')">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span id="icon-${category}" class="text-yellow-400">${collapsedCategories[category] ? '▶' : '▼'}</span>
+                                <h2 class="text-2xl font-bold text-orange-400">${category}</h2>
+                                <span class="text-sm text-gray-300 bg-gray-700 px-2 py-1 rounded">${items.length} Items</span>
+                            </div>
+                            <button 
+                                onclick="event.stopPropagation(); addNewItem('${category}')" 
+                                class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-400 text-black font-semibold rounded text-sm hover:opacity-90 transition flex items-center gap-2"
+                            >
+                                <span>+</span>
+                                <span>Item hinzufügen</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="content-${category}" class="category-content ${collapsedCategories[category] ? 'hidden' : ''}">
+                        <div class="bg-gray-800 border border-gray-700 shadow-lg rounded-b-lg p-4">
+                            <table class="w-full text-left table-auto border-collapse">
+                                <thead>
+                                    <tr class="text-xs text-gray-400 border-b border-gray-700 uppercase">
+                                        <th class="p-2 w-8"></th>
+                                        <th class="p-2">Item</th>
+                                        <th class="p-2">Menge Einkauf</th>
+                                        <th class="p-2">Kosten (Taler)</th>
+                                        <th class="p-2">Menge Verkauf</th>
+                                        <th class="p-2">Einkauf (Gold)</th>
+                                        <th class="p-2">Wiederverkauf (Gold)</th>
+                                        <th class="p-2">Gewinn / Verlust</th>
+                                        <th class="p-2 w-8"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-${category}">
+                                    <!-- Items werden hier eingefügt -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(section);
+                renderCategory(category);
+            }
+            
+            // Event-Listener
+            document.getElementById('edit-taler-btn').addEventListener('click', toggleTalerEdit);
             document.getElementById('taler-input').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    toggleTalerEdit();
+                    saveTalerPrice();
                 }
             });
+            document.getElementById('search-input').addEventListener('input', performSearch);
+            
+            updateFavoritesDisplay();
         }
 
         // App starten
