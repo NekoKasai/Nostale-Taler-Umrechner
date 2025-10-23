@@ -6,12 +6,35 @@ const itemsCalculator = {
     
     init(itemsData) {
         this.data = itemsData;
+        // Stelle sicher, dass Gillion-Rechner Kategorie existiert
+        if (!this.data['Gillion-Rechner']) {
+            this.data['Gillion-Rechner'] = [this.createDefaultGillionItem()];
+        }
         this.loadCollapsedStates();
         this.renderAllCategories();
     },
     
+    // Erstellt das Standard-Gillion Item
+    createDefaultGillionItem() {
+        return {
+            id: this.nextItemId++,
+            name: "Gillion Verarbeitung",
+            gillionPrice: 2990,
+            cellaOutput: 7.5,
+            cellaPrice: 472,
+            cellonCost: 500,
+            amount: 1,
+            isFavorite: false,
+            isGillionCalculator: true // Flag um Gillion-Rechner zu identifizieren
+        };
+    },
+    
     // Hilfsfunktionen
     profitForItem(item, sellAmount = null) {
+        if (item.isGillionCalculator) {
+            return this.calculateGillionProfit(item);
+        }
+        
         const actualSellAmount = sellAmount !== null ? sellAmount : item.amount;
         const cost = item.buyPrice * item.amount;
         const revenue = item.sellPrice * actualSellAmount;
@@ -20,8 +43,35 @@ const itemsCalculator = {
         return { cost, profit, pct, revenue, sellAmount: actualSellAmount };
     },
     
+    // Berechnet Gewinn für Gillion-Verarbeitung
+    calculateGillionProfit(item) {
+        const gillionCost = item.gillionPrice * item.amount;
+        const cellonCost = item.cellonCost * item.amount;
+        const totalCost = gillionCost + cellonCost;
+        
+        const totalCellaOutput = item.cellaOutput * item.amount;
+        const revenue = totalCellaOutput * item.cellaPrice;
+        
+        const profit = revenue - totalCost;
+        const pct = totalCost === 0 ? 0 : (profit / totalCost) * 100;
+        
+        return { 
+            cost: totalCost, 
+            profit, 
+            pct, 
+            revenue,
+            gillionCost,
+            cellonCost,
+            totalCellaOutput
+        };
+    },
+    
     // Berechnet ab welcher Menge Gewinn gemacht wird
     calculateBreakEven(item) {
+        if (item.isGillionCalculator) {
+            return this.calculateGillionBreakEven(item);
+        }
+        
         if (item.sellPrice <= 0 || item.buyPrice <= 0) {
             return { breakEvenAmount: 0, isProfitable: false };
         }
@@ -33,6 +83,27 @@ const itemsCalculator = {
         return { breakEvenAmount, isProfitable };
     },
     
+    // Berechnet Gewinnschwelle für Gillion
+    calculateGillionBreakEven(item) {
+        if (item.cellaPrice <= 0 || item.gillionPrice <= 0 || item.cellaOutput <= 0) {
+            return { breakEvenAmount: 0, isProfitable: false };
+        }
+        
+        const costPerGillion = item.gillionPrice + item.cellonCost;
+        const revenuePerGillion = item.cellaOutput * item.cellaPrice;
+        const profitPerGillion = revenuePerGillion - costPerGillion;
+        
+        const isProfitable = profitPerGillion >= 0;
+        
+        // Bei negativem Gewinn pro Stück kann keine Gewinnschwelle erreicht werden
+        if (profitPerGillion < 0) {
+            return { breakEvenAmount: Infinity, isProfitable: false };
+        }
+        
+        // Bei Gillion ist es immer profitabel, da Gewinn pro Stück positiv
+        return { breakEvenAmount: 1, isProfitable: true };
+    },
+    
     highlightText(text, search) {
         if (!search) return text;
         const regex = new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
@@ -42,6 +113,11 @@ const itemsCalculator = {
     // Formatierung mit Tausenderpunkten für bessere Lesbarkeit
     formatNumberWithDots(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    },
+    
+    // Formatierung für Dezimalzahlen
+    formatDecimal(number) {
+        return number.toString().replace('.', ',');
     },
     
     // Datenbank-Operationen
@@ -62,7 +138,12 @@ const itemsCalculator = {
     async updateItem(category, id, field, value) {
         const item = this.data[category].find(item => item.id === id);
         if (item) {
-            item[field] = value;
+            // Für Dezimalzahlen bei Gillion
+            if (item.isGillionCalculator && (field === 'cellaOutput')) {
+                item[field] = parseFloat(value) || 0;
+            } else {
+                item[field] = value;
+            }
             this.updateItemRow(category, item);
             await this.saveCategory(category);
             
@@ -75,6 +156,11 @@ const itemsCalculator = {
     updateItemRow(category, item) {
         const row = document.getElementById(`item-${category}-${item.id}`);
         if (!row) return;
+        
+        if (item.isGillionCalculator) {
+            this.updateGillionRow(category, item, row);
+            return;
+        }
         
         const sellAmountInput = row.querySelector('.sell-amount');
         const currentSellAmount = sellAmountInput ? parseInt(sellAmountInput.value) || item.amount : item.amount;
@@ -121,6 +207,47 @@ const itemsCalculator = {
         }
     },
     
+    // Spezielle Update-Funktion für Gillion-Rechner
+    updateGillionRow(category, item, row) {
+        const { cost, profit, pct, revenue, gillionCost, cellonCost, totalCellaOutput } = this.profitForItem(item);
+        const { breakEvenAmount, isProfitable } = this.calculateBreakEven(item);
+        
+        const gillionCostCell = row.querySelector('.gillion-cost-cell');
+        const cellonCostCell = row.querySelector('.cellon-cost-cell');
+        const totalCostCell = row.querySelector('.total-cost-cell');
+        const cellaOutputCell = row.querySelector('.cella-output-cell');
+        const revenueCell = row.querySelector('.revenue-cell');
+        const profitCell = row.querySelector('.profit-cell');
+        const breakEvenCell = row.querySelector('.break-even-cell');
+        const favoriteStar = row.querySelector('.favorite-star');
+        
+        if (gillionCostCell) gillionCostCell.textContent = this.formatNumberWithDots(gillionCost);
+        if (cellonCostCell) cellonCostCell.textContent = this.formatNumberWithDots(cellonCost);
+        if (totalCostCell) totalCostCell.textContent = this.formatNumberWithDots(cost);
+        if (cellaOutputCell) cellaOutputCell.textContent = this.formatDecimal(totalCellaOutput);
+        if (revenueCell) revenueCell.textContent = this.formatNumberWithDots(revenue);
+        
+        if (profitCell) {
+            profitCell.textContent = `${this.formatNumberWithDots(profit)} (${pct.toFixed(2)}%)`;
+            profitCell.className = `p-2 align-top font-semibold ${profit >= 0 ? 'profit-positive' : 'profit-negative'} profit-cell`;
+        }
+        
+        if (breakEvenCell) {
+            if (isProfitable) {
+                breakEvenCell.textContent = `✓ Ab ${breakEvenAmount} Stück profitabel`;
+                breakEvenCell.className = 'p-2 align-top text-xs text-green-400 break-even-cell';
+            } else {
+                breakEvenCell.textContent = `✗ Nicht profitabel`;
+                breakEvenCell.className = 'p-2 align-top text-xs text-red-400 break-even-cell';
+            }
+        }
+        
+        if (favoriteStar) {
+            favoriteStar.className = `favorite-star ${item.isFavorite ? 'favorited' : 'text-gray-500'}`;
+            favoriteStar.textContent = item.isFavorite ? '★' : '☆';
+        }
+    },
+    
     updateAllCalculations() {
         for (const [category, items] of Object.entries(this.data)) {
             for (const item of items) {
@@ -141,6 +268,13 @@ const itemsCalculator = {
     },
     
     async deleteItem(category, id) {
+        // Verhindere das Löschen des Gillion-Rechners
+        const item = this.data[category].find(item => item.id === id);
+        if (item && item.isGillionCalculator) {
+            alert('Der Gillion-Rechner kann nicht gelöscht werden!');
+            return;
+        }
+        
         if (confirm('Möchtest du dieses Item wirklich löschen?')) {
             this.data[category] = this.data[category].filter(item => item.id !== id);
             this.renderCategory(category);
@@ -150,6 +284,12 @@ const itemsCalculator = {
     },
     
     async deleteCategory(category) {
+        // Verhindere das Löschen der Gillion-Rechner Kategorie
+        if (category === 'Gillion-Rechner') {
+            alert('Die Gillion-Rechner Kategorie kann nicht gelöscht werden!');
+            return;
+        }
+        
         if (confirm(`Möchtest du die Kategorie "${category}" wirklich löschen?`)) {
             delete this.data[category];
             await Database.deleteData(Database.STORES.ITEMS_DATA, category);
@@ -158,6 +298,12 @@ const itemsCalculator = {
     },
     
     async addNewItem(category) {
+        // Verhindere das Hinzufügen weiterer Items zum Gillion-Rechner
+        if (category === 'Gillion-Rechner') {
+            alert('Im Gillion-Rechner können keine weiteren Items hinzugefügt werden!');
+            return;
+        }
+        
         const newItem = {
             id: this.nextItemId++,
             name: "Neues Item",
@@ -226,141 +372,303 @@ const itemsCalculator = {
         });
         
         sortedItems.forEach(item => {
-            const { cost, profit, pct, revenue } = this.profitForItem(item);
-            const { breakEvenAmount, isProfitable } = this.calculateBreakEven(item);
+            if (item.isGillionCalculator) {
+                this.renderGillionItem(category, item, container);
+            } else {
+                this.renderNormalItem(category, item, container);
+            }
+        });
+    },
+    
+    // Rendert ein normales Item
+    renderNormalItem(category, item, container) {
+        const { cost, profit, pct, revenue } = this.profitForItem(item);
+        const { breakEvenAmount, isProfitable } = this.calculateBreakEven(item);
+        
+        const row = document.createElement('tr');
+        row.id = `item-${category}-${item.id}`;
+        row.className = 'border-b border-gray-700 hover:bg-gray-700/40';
+        
+        row.innerHTML = `
+            <td class="p-2 align-top w-8">
+                <span class="favorite-star ${item.isFavorite ? 'favorited' : 'text-gray-500'}" onclick="itemsCalculator.toggleFavorite('${category}', ${item.id})">
+                    ${item.isFavorite ? '★' : '☆'}
+                </span>
+            </td>
+            <td class="p-2 align-top w-48">
+                <input
+                    class="w-full bg-transparent outline-none text-yellow-300 item-name"
+                    value="${item.name}"
+                />
+            </td>
+            <td class="p-2 align-top w-24">
+                <input
+                    type="number"
+                    min="1"
+                    class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 buy-amount"
+                    value="${item.amount}"
+                />
+            </td>
+            <td class="p-2 align-top w-24">
+                <input
+                    type="number"
+                    min="0"
+                    class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 buy-price"
+                    value="${item.buyPrice}"
+                />
+            </td>
+            <td class="p-2 align-top text-yellow-400 cost-cell">${this.formatNumberWithDots(cost)}</td>
+            <td class="p-2 align-top w-24">
+                <input
+                    type="number"
+                    min="0"
+                    max="${item.amount}"
+                    class="w-20 border border-gray-600 bg-gray-900 text-green-300 rounded px-2 py-1 sell-amount"
+                    value="${item.amount}"
+                />
+            </td>
+            <td class="p-2 align-top">
+                <input
+                    type="text"
+                    class="w-full border border-gray-600 bg-gray-900 text-right text-yellow-300 rounded px-2 py-1 sell-price"
+                    value="${this.formatNumberWithDots(item.sellPrice)}"
+                />
+            </td>
+            <td class="p-2 align-top text-yellow-400 revenue-cell">${this.formatNumberWithDots(revenue)}</td>
+            <td class="p-2 align-top font-semibold ${item.sellPrice > 0 ? (profit >= 0 ? 'profit-positive' : 'profit-negative') : 'text-gray-500'} profit-cell">
+                ${item.sellPrice > 0 ? `${this.formatNumberWithDots(profit)} (${pct.toFixed(2)}%)` : '-'}
+            </td>
+            <td class="p-2 align-top text-xs break-even-cell">
+                ${item.sellPrice > 0 && item.buyPrice > 0 ? 
+                    (isProfitable ? 
+                        `<span class="text-green-400">✓ Ab ${breakEvenAmount} Stück</span>` : 
+                        `<span class="text-red-400">✗ Benötigt ${breakEvenAmount} Stück</span>`) : 
+                    '-'}
+            </td>
+            <td class="p-2 align-top">
+                <button onclick="itemsCalculator.deleteItem('${category}', ${item.id})" class="text-red-400 hover:text-red-300 transition">
+                    🗑️
+                </button>
+            </td>
+        `;
+        
+        container.appendChild(row);
+        this.setupNormalItemEventListeners(category, item, row);
+    },
+    
+    // Rendert den Gillion-Rechner
+    renderGillionItem(category, item, container) {
+        const { cost, profit, pct, revenue, gillionCost, cellonCost, totalCellaOutput } = this.profitForItem(item);
+        const { breakEvenAmount, isProfitable } = this.calculateBreakEven(item);
+        
+        const row = document.createElement('tr');
+        row.id = `item-${category}-${item.id}`;
+        row.className = 'border-b border-gray-700 hover:bg-gray-700/40 bg-blue-900/20';
+        
+        row.innerHTML = `
+            <td class="p-2 align-top w-8">
+                <span class="favorite-star ${item.isFavorite ? 'favorited' : 'text-gray-500'}" onclick="itemsCalculator.toggleFavorite('${category}', ${item.id})">
+                    ${item.isFavorite ? '★' : '☆'}
+                </span>
+            </td>
+            <td class="p-2 align-top w-48">
+                <span class="text-yellow-300 font-semibold">${item.name}</span>
+            </td>
+            <td class="p-2 align-top w-24">
+                <input
+                    type="number"
+                    min="1"
+                    class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 gillion-amount"
+                    value="${item.amount}"
+                />
+            </td>
+            <td class="p-2 align-top w-24">
+                <input
+                    type="text"
+                    class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 gillion-price"
+                    value="${this.formatNumberWithDots(item.gillionPrice)}"
+                />
+            </td>
+            <td class="p-2 align-top text-yellow-400 gillion-cost-cell">${this.formatNumberWithDots(gillionCost)}</td>
+            <td class="p-2 align-top w-24">
+                <input
+                    type="text"
+                    class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 cellon-cost"
+                    value="${this.formatNumberWithDots(item.cellonCost)}"
+                />
+            </td>
+            <td class="p-2 align-top text-yellow-400 cellon-cost-cell">${this.formatNumberWithDots(cellonCost)}</td>
+            <td class="p-2 align-top text-yellow-400 total-cost-cell">${this.formatNumberWithDots(cost)}</td>
+            <td class="p-2 align-top w-24">
+                <input
+                    type="number"
+                    step="0.1"
+                    class="w-20 border border-gray-600 bg-gray-900 text-green-300 rounded px-2 py-1 cella-output"
+                    value="${this.formatDecimal(item.cellaOutput)}"
+                />
+            </td>
+            <td class="p-2 align-top text-yellow-400 cella-output-cell">${this.formatDecimal(totalCellaOutput)}</td>
+            <td class="p-2 align-top">
+                <input
+                    type="text"
+                    class="w-full border border-gray-600 bg-gray-900 text-right text-yellow-300 rounded px-2 py-1 cella-price"
+                    value="${this.formatNumberWithDots(item.cellaPrice)}"
+                />
+            </td>
+            <td class="p-2 align-top text-yellow-400 revenue-cell">${this.formatNumberWithDots(revenue)}</td>
+            <td class="p-2 align-top font-semibold ${profit >= 0 ? 'profit-positive' : 'profit-negative'} profit-cell">
+                ${this.formatNumberWithDots(profit)} (${pct.toFixed(2)}%)
+            </td>
+            <td class="p-2 align-top text-xs break-even-cell">
+                ${isProfitable ? 
+                    `<span class="text-green-400">✓ Ab ${breakEvenAmount} Stück profitabel</span>` : 
+                    `<span class="text-red-400">✗ Nicht profitabel</span>`}
+            </td>
+            <td class="p-2 align-top">
+                <button onclick="itemsCalculator.deleteItem('${category}', ${item.id})" class="text-red-400 hover:text-red-300 transition" disabled>
+                    🗑️
+                </button>
+            </td>
+        `;
+        
+        container.appendChild(row);
+        this.setupGillionEventListeners(category, item, row);
+    },
+    
+    // Event-Listener für normale Items
+    setupNormalItemEventListeners(category, item, row) {
+        const nameInput = row.querySelector('.item-name');
+        const buyAmountInput = row.querySelector('.buy-amount');
+        const sellAmountInput = row.querySelector('.sell-amount');
+        const buyPriceInput = row.querySelector('.buy-price');
+        const sellPriceInput = row.querySelector('.sell-price');
+        
+        nameInput.addEventListener('input', (e) => {
+            this.updateItem(category, item.id, 'name', e.target.value);
+        });
+        
+        buyAmountInput.addEventListener('input', (e) => {
+            const newAmount = parseInt(e.target.value) || 1;
+            this.updateItem(category, item.id, 'amount', newAmount);
             
-            const row = document.createElement('tr');
-            row.id = `item-${category}-${item.id}`;
-            row.className = 'border-b border-gray-700 hover:bg-gray-700/40';
-            
-            row.innerHTML = `
-                <td class="p-2 align-top w-8">
-                    <span class="favorite-star ${item.isFavorite ? 'favorited' : 'text-gray-500'}" onclick="itemsCalculator.toggleFavorite('${category}', ${item.id})">
-                        ${item.isFavorite ? '★' : '☆'}
-                    </span>
-                </td>
-                <td class="p-2 align-top w-48">
-                    <input
-                        class="w-full bg-transparent outline-none text-yellow-300 item-name"
-                        value="${item.name}"
-                    />
-                </td>
-                <td class="p-2 align-top w-24">
-                    <input
-                        type="number"
-                        min="1"
-                        class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 buy-amount"
-                        value="${item.amount}"
-                    />
-                </td>
-                <td class="p-2 align-top w-24">
-                    <input
-                        type="number"
-                        min="0"
-                        class="w-20 border border-gray-600 bg-gray-900 text-orange-300 rounded px-2 py-1 buy-price"
-                        value="${item.buyPrice}"
-                    />
-                </td>
-                <td class="p-2 align-top text-yellow-400 cost-cell">${this.formatNumberWithDots(cost)}</td>
-                <td class="p-2 align-top w-24">
-                    <input
-                        type="number"
-                        min="0"
-                        max="${item.amount}"
-                        class="w-20 border border-gray-600 bg-gray-900 text-green-300 rounded px-2 py-1 sell-amount"
-                        value="${item.amount}"
-                    />
-                </td>
-                <td class="p-2 align-top">
-                    <input
-                        type="text"
-                        class="w-full border border-gray-600 bg-gray-900 text-right text-yellow-300 rounded px-2 py-1 sell-price"
-                        value="${this.formatNumberWithDots(item.sellPrice)}"
-                    />
-                </td>
-                <td class="p-2 align-top text-yellow-400 revenue-cell">${this.formatNumberWithDots(revenue)}</td>
-                <td class="p-2 align-top font-semibold ${item.sellPrice > 0 ? (profit >= 0 ? 'profit-positive' : 'profit-negative') : 'text-gray-500'} profit-cell">
-                    ${item.sellPrice > 0 ? `${this.formatNumberWithDots(profit)} (${pct.toFixed(2)}%)` : '-'}
-                </td>
-                <td class="p-2 align-top text-xs break-even-cell">
-                    ${item.sellPrice > 0 && item.buyPrice > 0 ? 
-                        (isProfitable ? 
-                            `<span class="text-green-400">✓ Ab ${breakEvenAmount} Stück</span>` : 
-                            `<span class="text-red-400">✗ Benötigt ${breakEvenAmount} Stück</span>`) : 
-                        '-'}
-                </td>
-                <td class="p-2 align-top">
-                    <button onclick="itemsCalculator.deleteItem('${category}', ${item.id})" class="text-red-400 hover:text-red-300 transition">
-                        🗑️
-                    </button>
-                </td>
-            `;
-            
-            container.appendChild(row);
-            
-            // Event-Listener
-            const nameInput = row.querySelector('.item-name');
-            const buyAmountInput = row.querySelector('.buy-amount');
-            const sellAmountInput = row.querySelector('.sell-amount');
-            const buyPriceInput = row.querySelector('.buy-price');
-            const sellPriceInput = row.querySelector('.sell-price');
-            
-            nameInput.addEventListener('input', (e) => {
-                this.updateItem(category, item.id, 'name', e.target.value);
-            });
-            
-            buyAmountInput.addEventListener('input', (e) => {
-                const newAmount = parseInt(e.target.value) || 1;
-                this.updateItem(category, item.id, 'amount', newAmount);
-                
-                // Aktualisiere das Maximum für die Verkaufsmenge
-                if (sellAmountInput) {
-                    sellAmountInput.max = newAmount;
-                    if (parseInt(sellAmountInput.value) > newAmount) {
-                        sellAmountInput.value = newAmount;
-                        this.updateItemRow(category, item);
-                    }
+            if (sellAmountInput) {
+                sellAmountInput.max = newAmount;
+                if (parseInt(sellAmountInput.value) > newAmount) {
+                    sellAmountInput.value = newAmount;
+                    this.updateItemRow(category, item);
                 }
-            });
-            
-            buyPriceInput.addEventListener('input', (e) => {
-                this.updateItem(category, item.id, 'buyPrice', parseInt(e.target.value) || 0);
-            });
-            
-            sellPriceInput.addEventListener('input', (e) => {
-                // Entferne die Punkte für die Verarbeitung
-                const rawValue = e.target.value.replace(/\./g, '');
-                const value = parseInt(rawValue) || 0;
-                if (!isNaN(value)) {
-                    this.updateItem(category, item.id, 'sellPrice', value);
-                    // Aktualisiere die Anzeige mit Punkten
-                    e.target.value = this.formatNumberWithDots(value);
-                }
-            });
-            
-            // Neue Event-Listener für Verkaufsmenge
-            sellAmountInput.addEventListener('input', (e) => {
-                const newSellAmount = parseInt(e.target.value) || 0;
-                // Stelle sicher, dass die Verkaufsmenge nicht größer als die gekaufte Menge ist
-                if (newSellAmount > item.amount) {
-                    e.target.value = item.amount;
-                }
-                this.updateItemRow(category, item);
-            });
-
-            // Input Formatierung
-            buyPriceInput.addEventListener('blur', (e) => {
-                const value = parseInt(e.target.value) || 0;
+            }
+        });
+        
+        buyPriceInput.addEventListener('input', (e) => {
+            this.updateItem(category, item.id, 'buyPrice', parseInt(e.target.value) || 0);
+        });
+        
+        sellPriceInput.addEventListener('input', (e) => {
+            const rawValue = e.target.value.replace(/\./g, '');
+            const value = parseInt(rawValue) || 0;
+            if (!isNaN(value)) {
+                this.updateItem(category, item.id, 'sellPrice', value);
                 e.target.value = this.formatNumberWithDots(value);
-            });
+            }
+        });
+        
+        sellAmountInput.addEventListener('input', (e) => {
+            const newSellAmount = parseInt(e.target.value) || 0;
+            if (newSellAmount > item.amount) {
+                e.target.value = item.amount;
+            }
+            this.updateItemRow(category, item);
+        });
 
-            buyPriceInput.addEventListener('focus', (e) => {
-                e.target.value = e.target.value.replace(/\./g, '');
-            });
+        buyPriceInput.addEventListener('blur', (e) => {
+            const value = parseInt(e.target.value) || 0;
+            e.target.value = this.formatNumberWithDots(value);
+        });
 
-            sellPriceInput.addEventListener('focus', (e) => {
-                e.target.value = e.target.value.replace(/\./g, '');
-            });
+        buyPriceInput.addEventListener('focus', (e) => {
+            e.target.value = e.target.value.replace(/\./g, '');
+        });
+
+        sellPriceInput.addEventListener('focus', (e) => {
+            e.target.value = e.target.value.replace(/\./g, '');
+        });
+    },
+    
+    // Event-Listener für Gillion-Rechner
+    setupGillionEventListeners(category, item, row) {
+        const amountInput = row.querySelector('.gillion-amount');
+        const gillionPriceInput = row.querySelector('.gillion-price');
+        const cellonCostInput = row.querySelector('.cellon-cost');
+        const cellaOutputInput = row.querySelector('.cella-output');
+        const cellaPriceInput = row.querySelector('.cella-price');
+        
+        amountInput.addEventListener('input', (e) => {
+            this.updateItem(category, item.id, 'amount', parseInt(e.target.value) || 1);
+        });
+        
+        gillionPriceInput.addEventListener('input', (e) => {
+            const rawValue = e.target.value.replace(/\./g, '');
+            const value = parseInt(rawValue) || 0;
+            if (!isNaN(value)) {
+                this.updateItem(category, item.id, 'gillionPrice', value);
+                e.target.value = this.formatNumberWithDots(value);
+            }
+        });
+        
+        cellonCostInput.addEventListener('input', (e) => {
+            const rawValue = e.target.value.replace(/\./g, '');
+            const value = parseInt(rawValue) || 0;
+            if (!isNaN(value)) {
+                this.updateItem(category, item.id, 'cellonCost', value);
+                e.target.value = this.formatNumberWithDots(value);
+            }
+        });
+        
+        cellaOutputInput.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value.replace(',', '.')) || 0;
+            this.updateItem(category, item.id, 'cellaOutput', value);
+            e.target.value = this.formatDecimal(value);
+        });
+        
+        cellaPriceInput.addEventListener('input', (e) => {
+            const rawValue = e.target.value.replace(/\./g, '');
+            const value = parseInt(rawValue) || 0;
+            if (!isNaN(value)) {
+                this.updateItem(category, item.id, 'cellaPrice', value);
+                e.target.value = this.formatNumberWithDots(value);
+            }
+        });
+
+        // Input Formatierung
+        gillionPriceInput.addEventListener('blur', (e) => {
+            const rawValue = e.target.value.replace(/\./g, '');
+            const value = parseInt(rawValue) || 0;
+            e.target.value = this.formatNumberWithDots(value);
+        });
+
+        gillionPriceInput.addEventListener('focus', (e) => {
+            e.target.value = e.target.value.replace(/\./g, '');
+        });
+
+        cellonCostInput.addEventListener('blur', (e) => {
+            const rawValue = e.target.value.replace(/\./g, '');
+            const value = parseInt(rawValue) || 0;
+            e.target.value = this.formatNumberWithDots(value);
+        });
+
+        cellonCostInput.addEventListener('focus', (e) => {
+            e.target.value = e.target.value.replace(/\./g, '');
+        });
+
+        cellaPriceInput.addEventListener('blur', (e) => {
+            const rawValue = e.target.value.replace(/\./g, '');
+            const value = parseInt(rawValue) || 0;
+            e.target.value = this.formatNumberWithDots(value);
+        });
+
+        cellaPriceInput.addEventListener('focus', (e) => {
+            e.target.value = e.target.value.replace(/\./g, '');
         });
     },
     
@@ -373,6 +681,9 @@ const itemsCalculator = {
             section.className = 'mb-6';
             const key = `items-${category}`;
             
+            // Unterschiedliche Tabellen-Header für Gillion-Rechner
+            const isGillionCategory = category === 'Gillion-Rechner';
+            
             section.innerHTML = `
                 <div class="category-header rounded-lg p-4 mb-0" onclick="itemsCalculator.toggleCategory('${category}')">
                     <div class="flex items-center justify-between">
@@ -382,19 +693,23 @@ const itemsCalculator = {
                             <span class="text-sm text-gray-300 bg-gray-700 px-2 py-1 rounded">${this.formatNumberWithDots(items.length)} Items</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button 
-                                onclick="event.stopPropagation(); itemsCalculator.addNewItem('${category}')" 
-                                class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-400 text-black font-semibold rounded text-sm hover:opacity-90 transition flex items-center gap-2"
-                            >
-                                <span>+</span>
-                                <span>Item</span>
-                            </button>
-                            <button 
-                                onclick="event.stopPropagation(); itemsCalculator.deleteCategory('${category}')" 
-                                class="px-3 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition"
-                            >
-                                🗑️
-                            </button>
+                            ${!isGillionCategory ? `
+                                <button 
+                                    onclick="event.stopPropagation(); itemsCalculator.addNewItem('${category}')" 
+                                    class="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-400 text-black font-semibold rounded text-sm hover:opacity-90 transition flex items-center gap-2"
+                                >
+                                    <span>+</span>
+                                    <span>Item</span>
+                                </button>
+                                <button 
+                                    onclick="event.stopPropagation(); itemsCalculator.deleteCategory('${category}')" 
+                                    class="px-3 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition"
+                                >
+                                    🗑️
+                                </button>
+                            ` : `
+                                <span class="text-sm text-blue-400 bg-blue-900/30 px-3 py-2 rounded">Spezial-Rechner</span>
+                            `}
                         </div>
                     </div>
                 </div>
@@ -403,17 +718,35 @@ const itemsCalculator = {
                         <table class="w-full text-left table-auto border-collapse">
                             <thead>
                                 <tr class="text-xs text-gray-400 border-b border-gray-700 uppercase">
-                                    <th class="p-2 w-8"></th>
-                                    <th class="p-2">Item</th>
-                                    <th class="p-2">Einkaufs-<br>menge</th>
-                                    <th class="p-2">Einkaufs-<br>preis</th>
-                                    <th class="p-2">Einkauf<br>(Gold)</th>
-                                    <th class="p-2">Verkaufs-<br>menge</th>
-                                    <th class="p-2">Verkaufs-<br>preis</th>
-                                    <th class="p-2">Verkauf<br>(Gold)</th>
-                                    <th class="p-2">Gewinn /<br>Verlust</th>
-                                    <th class="p-2">Gewinn-<br>schwelle</th>
-                                    <th class="p-2 w-8"></th>
+                                    ${isGillionCategory ? `
+                                        <th class="p-2 w-8"></th>
+                                        <th class="p-2">Item</th>
+                                        <th class="p-2">Anzahl<br>Gillion</th>
+                                        <th class="p-2">Preis pro<br>Gillion</th>
+                                        <th class="p-2">Kosten<br>Gillion</th>
+                                        <th class="p-2">Preis<br>Cellon</th>
+                                        <th class="p-2">Kosten<br>Cellon</th>
+                                        <th class="p-2">Gesamt-<br>kosten</th>
+                                        <th class="p-2">Cella<br>Output</th>
+                                        <th class="p-2">Gesamt<br>Cella</th>
+                                        <th class="p-2">Preis pro<br>Cella</th>
+                                        <th class="p-2">Verkauf<br>(Gold)</th>
+                                        <th class="p-2">Gewinn /<br>Verlust</th>
+                                        <th class="p-2">Gewinn-<br>schwelle</th>
+                                        <th class="p-2 w-8"></th>
+                                    ` : `
+                                        <th class="p-2 w-8"></th>
+                                        <th class="p-2">Item</th>
+                                        <th class="p-2">Einkaufs-<br>menge</th>
+                                        <th class="p-2">Einkaufs-<br>preis</th>
+                                        <th class="p-2">Einkauf<br>(Gold)</th>
+                                        <th class="p-2">Verkaufs-<br>menge</th>
+                                        <th class="p-2">Verkaufs-<br>preis</th>
+                                        <th class="p-2">Verkauf<br>(Gold)</th>
+                                        <th class="p-2">Gewinn /<br>Verlust</th>
+                                        <th class="p-2">Gewinn-<br>schwelle</th>
+                                        <th class="p-2 w-8"></th>
+                                    `}
                                 </tr>
                             </thead>
                             <tbody id="tbody-items-${category}">
